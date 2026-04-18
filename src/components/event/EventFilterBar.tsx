@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { styles } from '@styles/styles';
 
 interface CategoryOption {
   id: number;
@@ -54,10 +55,10 @@ export function EventFilterBar({
               key={option.value}
               type="button"
               onClick={() => onPresetChange(option.value)}
-              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${
+              className={`${styles.filter.chip} ${
                 active
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                  ? styles.filter.chipActiveDark
+                  : styles.filter.chipInactive
               }`}
             >
               {option.label}
@@ -70,10 +71,10 @@ export function EventFilterBar({
         <button
           type="button"
           onClick={() => onCategoryChange(undefined)}
-          className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${
+          className={`${styles.filter.chip} ${
             selectedCategoryId === undefined
-              ? 'bg-orange-600 text-white'
-              : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+              ? styles.filter.chipActivePrimary
+              : styles.filter.chipInactive
           }`}
         >
           All Categories
@@ -87,10 +88,10 @@ export function EventFilterBar({
               key={category.id}
               type="button"
               onClick={() => onCategoryChange(category.id)}
-              className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${
+              className={`${styles.filter.chip} ${
                 active
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                  ? styles.filter.chipActivePrimary
+                  : styles.filter.chipInactive
               }`}
             >
               {category.name}

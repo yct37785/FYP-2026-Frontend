@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import type { EventItem } from '@mytypes/event';
 import { Button } from '@components/ui/Button';
+import { styles } from '@styles/styles';
 
 interface FeaturedEventProps {
   event: EventItem | null;
@@ -32,11 +33,11 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
           <div className="min-h-[280px] bg-gradient-to-br from-slate-100 to-slate-200" />
           <div className="flex items-center p-8">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+              <p className={styles.text.eyebrow}>
                 Featured Event
               </p>
               <h2 className="mt-3 text-3xl font-semibold text-slate-900">
-                Discover what’s happening around you
+                Discover what's happening around you
               </h2>
               <p className="mt-4 text-sm text-slate-600">
                 Browse upcoming events, workshops, meetups, performances and
@@ -61,7 +62,7 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full min-h-[280px] items-center justify-center bg-gradient-to-br from-orange-100 via-white to-slate-100 text-sm text-slate-500">
+            <div className={`flex h-full min-h-[280px] items-center justify-center ${styles.brand.softBg} text-sm text-slate-500`}>
               Featured event
             </div>
           )}
@@ -69,7 +70,7 @@ export function FeaturedEvent({ event }: FeaturedEventProps) {
 
         <div className="flex items-center p-8">
           <div className="w-full">
-            <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+            <p className={styles.text.eyebrow}>
               Featured Event
             </p>
 

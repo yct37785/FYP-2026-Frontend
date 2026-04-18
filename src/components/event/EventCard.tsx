@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { EventItem } from '@mytypes/event';
+import { styles } from '@styles/styles';
 
 interface EventCardProps {
   event: EventItem;
@@ -56,7 +57,7 @@ export function EventCard({ event }: EventCardProps) {
       <div className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+            <p className={styles.text.eyebrow}>
               {event.categoryName || 'Event'}
             </p>
             <h3 className="mt-1 line-clamp-2 text-lg font-semibold text-slate-900">
@@ -64,7 +65,7 @@ export function EventCard({ event }: EventCardProps) {
             </h3>
           </div>
 
-          <div className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          <div className={styles.badge.primary}>
             {formatPrice(event.price)}
           </div>
         </div>
