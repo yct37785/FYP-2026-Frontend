@@ -2,7 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import type { UserRole } from '@mytypes/user';
-import { TopNavbar } from '@components/layout/TopNavbar';
+import { PrivateNavbar } from '@components/layout/PrivateNavbar';
 import { Sidebar } from '@components/layout/Sidebar';
 import { getNavItems } from '@lib/constants/nav';
 
@@ -18,7 +18,7 @@ export function AppShell({ role, onLogout, children }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <TopNavbar
+      <PrivateNavbar
         collapsed={collapsed}
         onToggleSidebar={() => setCollapsed((prev) => !prev)}
         onLogout={onLogout}
