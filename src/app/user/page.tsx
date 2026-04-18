@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { tokenStorage } from '@/lib/auth/token';
 import { getMyProfile } from '@/lib/api/user';
 import type { UserProfile } from '@/types/user';
+import { AppShell } from '@/components/layout/AppShell';
 
 export default function UserPage() {
   const router = useRouter();
@@ -38,61 +38,78 @@ export default function UserPage() {
 
   function handleLogout() {
     tokenStorage.clear();
-    router.push('/login');
+    router.replace('/login');
   }
 
-  return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">My Profile</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              Logged-in starter page using your backend `/api/user`.
-            </p>
-          </div>
-
-          <Button
-            variant="secondary"
-            className="w-auto px-4"
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </div>
-
-        {loading ? (
+  if (!profile && loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-3xl">
           <Card>
             <p className="text-slate-600">Loading profile...</p>
           </Card>
-        ) : error ? (
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile && error) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-3xl">
           <Card>
             <p className="text-red-600">{error}</p>
           </Card>
-        ) : profile ? (
-          <Card>
-            <div className="space-y-3 text-sm text-slate-700">
-              <div><span className="font-medium">Name:</span> {profile.name}</div>
-              <div><span className="font-medium">Email:</span> {profile.email}</div>
-              <div><span className="font-medium">Role:</span> {profile.role}</div>
-              <div><span className="font-medium">Status:</span> {profile.status}</div>
-              <div><span className="font-medium">Credits:</span> {profile.credits}</div>
-              <div>
-                <span className="font-medium">Description:</span>{' '}
-                {profile.description || '-'}
-              </div>
-              <div>
-                <span className="font-medium">Gender:</span>{' '}
-                {profile.gender || '-'}
-              </div>
-              <div>
-                <span className="font-medium">Age:</span>{' '}
-                {profile.age ?? '-'}
-              </div>
-            </div>
-          </Card>
-        ) : null}
+        </div>
       </div>
-    </main>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
+
+  return (
+    <AppShell role={profile.role} onLogout={handleLogout}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">My Profile</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            View your account details and profile information.
+          </p>
+        </div>
+
+        <Card>
+          <div className="space-y-3 text-sm text-slate-700">
+            <div>
+              <span className="font-medium">Name:</span> {profile.name}
+            </div>
+            <div>
+              <span className="font-medium">Email:</span> {profile.email}
+            </div>
+            <div>
+              <span className="font-medium">Role:</span> {profile.role}
+            </div>
+            <div>
+              <span className="font-medium">Status:</span> {profile.status}
+            </div>
+            <div>
+              <span className="font-medium">Credits:</span> {profile.credits}
+            </div>
+            <div>
+              <span className="font-medium">Description:</span>{' '}
+              {profile.description || '-'}
+            </div>
+            <div>
+              <span className="font-medium">Gender:</span>{' '}
+              {profile.gender || '-'}
+            </div>
+            <div>
+              <span className="font-medium">Age:</span> {profile.age ?? '-'}
+            </div>
+          </div>
+        </Card>
+      </div>
+    </AppShell>
   );
 }

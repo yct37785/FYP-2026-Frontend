@@ -1,6 +1,9 @@
 import { PropsWithChildren } from 'react';
-import { styles } from '@/styles/styles';
 
 export function Card({ children }: PropsWithChildren) {
-  return <div className={styles.card.base}>{children}</div>;
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {children}
+    </div>
+  );
 }
