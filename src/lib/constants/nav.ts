@@ -1,30 +1,43 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  User,
+  Tags,
+  Ticket,
+  Clock3,
+  Heart,
+  Star,
+  FileWarning,
+  CalendarDays,
+  PlusSquare,
+  Shield,
+} from 'lucide-react';
 import type { UserRole } from '@/types/user';
 
 export interface NavItem {
   label: string;
   href: string;
+  icon: LucideIcon;
 }
 
 const userNav: NavItem[] = [
-  { label: 'My Profile', href: '/user' },
-  { label: 'My Categories', href: '/user/categories' },
-  { label: 'My Bookings', href: '/user/bookings' },
-  { label: 'My Waitlists', href: '/user/waitlists' },
-  { label: 'My Favorites', href: '/user/favorites' },
-  { label: 'My Reviews', href: '/user/reviews' },
-  { label: 'My Reports', href: '/user/reports' },
-  { label: 'Notifications', href: '/user/notifications' },
+  { label: 'My Profile', href: '/user', icon: User },
+  { label: 'My Categories', href: '/user/categories', icon: Tags },
+  { label: 'My Bookings', href: '/user/bookings', icon: Ticket },
+  { label: 'My Waitlists', href: '/user/waitlists', icon: Clock3 },
+  { label: 'My Favorites', href: '/user/favorites', icon: Heart },
+  { label: 'My Reviews', href: '/user/reviews', icon: Star },
+  { label: 'My Reports', href: '/user/reports', icon: FileWarning },
 ];
 
 const organizerNav: NavItem[] = [
   ...userNav,
-  { label: 'Organizer Events', href: '/organizer/events' },
-  { label: 'Create Event', href: '/organizer/events/new' },
+  { label: 'Organizer Events', href: '/organizer/events', icon: CalendarDays },
+  { label: 'Create Event', href: '/organizer/events/new', icon: PlusSquare },
 ];
 
 const adminNav: NavItem[] = [
   ...organizerNav,
-  { label: 'Admin Reports', href: '/admin/reports' },
+  { label: 'Admin Reports', href: '/admin/reports', icon: Shield },
 ];
 
 export function getNavItems(role: UserRole): NavItem[] {
