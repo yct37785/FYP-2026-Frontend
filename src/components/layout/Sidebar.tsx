@@ -2,17 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useState } from 'react';
-import type { NavItem } from '@/lib/constants/nav';
+import type { NavItem } from '@lib/constants/nav';
 
 interface SidebarProps {
   items: NavItem[];
+  collapsed: boolean;
 }
 
-export function Sidebar({ items }: SidebarProps) {
+export function Sidebar({ items, collapsed }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
@@ -20,19 +18,7 @@ export function Sidebar({ items }: SidebarProps) {
         collapsed ? 'w-20' : 'w-64'
       }`}
     >
-      <div className="flex items-center justify-end p-3">
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-slate-300 bg-white p-2 text-slate-700 transition hover:bg-slate-50"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
-      </div>
-
-      <nav className="px-3 pb-4">
+      <nav className="px-3 py-4">
         <ul className="space-y-1">
           {items.map((item) => {
             const isActive = pathname === item.href;

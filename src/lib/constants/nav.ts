@@ -11,7 +11,7 @@ import {
   PlusSquare,
   Shield,
 } from 'lucide-react';
-import type { UserRole } from '@/types/user';
+import type { UserRole } from '@mytypes/user';
 
 export interface NavItem {
   label: string;

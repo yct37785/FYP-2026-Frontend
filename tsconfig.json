@@ -24,7 +24,7 @@
       "@components/*": ["./src/components/*"],
       "@lib/*": ["./src/lib/*"],
       "@styles/*": ["./src/styles/*"],
-      "@types/*": ["./src/types/*"],
+      "@mytypes/*": ["./src/types/*"],
       "@store/*": ["./src/store/*"]
     }
   },
