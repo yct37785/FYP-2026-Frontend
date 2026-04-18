@@ -1,5 +1,5 @@
 import { apiFetch } from '@lib/api/client';
-import type { GetPublicEventsResponse } from '@mytypes/event';
+import type { EventItem, GetPublicEventsResponse } from '@mytypes/event';
 
 export interface GetPublicEventsParams {
   categoryId?: number;
@@ -55,6 +55,12 @@ export function getPublicEvents(
   params: GetPublicEventsParams = {}
 ): Promise<GetPublicEventsResponse> {
   return apiFetch<GetPublicEventsResponse>(`/events/public${buildQuery(params)}`, {
+    method: 'GET',
+  });
+}
+
+export function getPublicEventById(eventId: number): Promise<EventItem> {
+  return apiFetch<EventItem>(`/events/public/${eventId}`, {
     method: 'GET',
   });
 }
