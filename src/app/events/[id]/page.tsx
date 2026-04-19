@@ -14,15 +14,25 @@ import { PublicNavbar } from '@components/layout/PublicNavbar';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { PageSkeleton } from '@components/ui/PageSkeleton';
+import { ActionStatusModal, type ActionModalMode } from '@components/ui/ActionStatusModal';
 import { ReviewList } from '@components/event/ReviewList';
 import { getPublicEventById } from '@lib/api/events';
 import { getEventReviews } from '@lib/api/reviews';
-import { createBooking, deleteMyBooking, getBookingStatus } from '@lib/api/bookings';
+import {
+  createBooking,
+  deleteMyBooking,
+  getBookingStatus,
+} from '@lib/api/bookings';
 import {
   createFavorite,
   deleteMyFavorite,
   getFavoriteStatus,
 } from '@lib/api/favorites';
+import {
+  createWaitlist,
+  deleteMyWaitlist,
+  getWaitlistStatus,
+} from '@lib/api/waitlists';
 import { getMyProfile } from '@lib/api/user';
 import { tokenStorage } from '@lib/auth/token';
 import { styles } from '@styles/styles';
@@ -84,12 +94,14 @@ export default function EventDetailPage() {
 
   const [isBooked, setIsBooked] = useState(false);
   const [bookingId, setBookingId] = useState<number | null>(null);
-  const [isBookingLoading, setIsBookingLoading] = useState(false);
 
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [bookingModalMessage, setBookingModalMessage] = useState('');
-  const [bookingModalError, setBookingModalError] = useState('');
-  const [bookingModalSuccess, setBookingModalSuccess] = useState('');
+  const [isWaitlisted, setIsWaitlisted] = useState(false);
+  const [waitlistId, setWaitlistId] = useState<number | null>(null);
+
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ActionModalMode>('confirm-book');
+  const [modalMessage, setModalMessage] = useState('');
 
   const eventId = useMemo(() => Number(params.id), [params.id]);
 
@@ -132,20 +144,29 @@ export default function EventDetailPage() {
         setFavoriteId(null);
         setIsBooked(false);
         setBookingId(null);
+        setIsWaitlisted(false);
+        setWaitlistId(null);
         return;
       }
 
       try {
-        const [favoriteStatus, bookingStatus, currentProfile] = await Promise.all([
-          getFavoriteStatus(eventId),
-          getBookingStatus(eventId),
-          getMyProfile(),
-        ]);
+        const [favoriteStatus, bookingStatus, waitlistStatus, currentProfile] =
+          await Promise.all([
+            getFavoriteStatus(eventId),
+            getBookingStatus(eventId),
+            getWaitlistStatus(eventId),
+            getMyProfile(),
+          ]);
 
         setIsFavorited(favoriteStatus.isFavorited);
         setFavoriteId(favoriteStatus.favoriteId);
+
         setIsBooked(bookingStatus.isBooked);
         setBookingId(bookingStatus.bookingId);
+
+        setIsWaitlisted(waitlistStatus.isWaitlisted);
+        setWaitlistId(waitlistStatus.waitlistId);
+
         setProfile(currentProfile);
       } catch {
         setProfile(null);
@@ -153,6 +174,8 @@ export default function EventDetailPage() {
         setFavoriteId(null);
         setIsBooked(false);
         setBookingId(null);
+        setIsWaitlisted(false);
+        setWaitlistId(null);
       }
     }
 
@@ -165,11 +188,23 @@ export default function EventDetailPage() {
     setEvent(refreshed);
   }
 
-  async function refreshBookingStatus() {
+  async function refreshStatuses() {
     if (!hasToken || Number.isNaN(eventId)) return;
-    const status = await getBookingStatus(eventId);
-    setIsBooked(status.isBooked);
-    setBookingId(status.bookingId);
+
+    const [bookingStatus, waitlistStatus, favoriteStatus] = await Promise.all([
+      getBookingStatus(eventId),
+      getWaitlistStatus(eventId),
+      getFavoriteStatus(eventId),
+    ]);
+
+    setIsBooked(bookingStatus.isBooked);
+    setBookingId(bookingStatus.bookingId);
+
+    setIsWaitlisted(waitlistStatus.isWaitlisted);
+    setWaitlistId(waitlistStatus.waitlistId);
+
+    setIsFavorited(favoriteStatus.isFavorited);
+    setFavoriteId(favoriteStatus.favoriteId);
   }
 
   async function refreshProfile() {
@@ -203,69 +238,75 @@ export default function EventDetailPage() {
     }
   }
 
-  function handleOpenBookingModal() {
+  function requireLoginOr(action: () => void) {
     if (!hasToken) {
       router.push('/login');
       return;
     }
-
-    setBookingModalMessage('');
-    setBookingModalError('');
-    setBookingModalSuccess('');
-    setIsBookingModalOpen(true);
+    action();
   }
 
-  async function handleConfirmBooking() {
+  function openModal(mode: ActionModalMode) {
+    setModalMode(mode);
+    setModalMessage('');
+    setModalOpen(true);
+  }
+
+  async function handleConfirmModalAction() {
     if (!event) return;
 
     try {
-      setIsBookingLoading(true);
-      setBookingModalMessage('');
-      setBookingModalError('');
-      setBookingModalSuccess('');
+      setIsActionLoading(true);
+      setModalMessage('');
 
-      await createBooking(event.id);
+      if (modalMode === 'confirm-book') {
+        await createBooking(event.id);
+        await Promise.all([refreshEvent(), refreshStatuses(), refreshProfile()]);
+        setModalMode('book-success');
+        setModalMessage('Your booking has been confirmed.');
+        return;
+      }
 
-      await Promise.all([
-        refreshEvent(),
-        refreshBookingStatus(),
-        refreshProfile(),
-      ]);
+      if (modalMode === 'confirm-cancel-booking' && bookingId) {
+        await deleteMyBooking(bookingId);
+        await Promise.all([refreshEvent(), refreshStatuses(), refreshProfile()]);
+        setModalMode('cancel-booking-success');
+        setModalMessage('Your booking has been cancelled.');
+        return;
+      }
 
-      setBookingModalSuccess('Booking created successfully.');
+      if (modalMode === 'confirm-waitlist') {
+        await createWaitlist(event.id);
+        await Promise.all([refreshEvent(), refreshStatuses()]);
+        setModalMode('waitlist-success');
+        setModalMessage('You have joined the waitlist successfully.');
+        return;
+      }
+
+      if (modalMode === 'confirm-cancel-waitlist' && waitlistId) {
+        await deleteMyWaitlist(waitlistId);
+        await Promise.all([refreshEvent(), refreshStatuses()]);
+        setModalMode('cancel-waitlist-success');
+        setModalMessage('You have left the waitlist.');
+        return;
+      }
     } catch (err) {
-      setBookingModalError(
-        err instanceof Error ? err.message : 'Failed to create booking'
-      );
+      const message =
+        err instanceof Error ? err.message : 'Action failed. Please try again.';
+
+      if (modalMode === 'confirm-book') {
+        setModalMode('book-error');
+      } else if (modalMode === 'confirm-cancel-booking') {
+        setModalMode('cancel-booking-error');
+      } else if (modalMode === 'confirm-waitlist') {
+        setModalMode('waitlist-error');
+      } else if (modalMode === 'confirm-cancel-waitlist') {
+        setModalMode('cancel-waitlist-error');
+      }
+
+      setModalMessage(message);
     } finally {
-      setIsBookingLoading(false);
-    }
-  }
-
-  async function handleCancelBooking() {
-    if (!bookingId) return;
-
-    try {
-      setIsBookingLoading(true);
-      setBookingModalMessage('');
-      setBookingModalError('');
-      setBookingModalSuccess('');
-
-      await deleteMyBooking(bookingId);
-
-      await Promise.all([
-        refreshEvent(),
-        refreshBookingStatus(),
-        refreshProfile(),
-      ]);
-
-      setBookingModalSuccess('Booking cancelled successfully.');
-    } catch (err) {
-      setBookingModalError(
-        err instanceof Error ? err.message : 'Failed to cancel booking'
-      );
-    } finally {
-      setIsBookingLoading(false);
+      setIsActionLoading(false);
     }
   }
 
@@ -302,6 +343,7 @@ export default function EventDetailPage() {
       </main>
     );
   }
+  const currentEvent = event;
 
   const mapsUrl = buildGoogleMapsUrl(event);
   const isFull = event.totalBookings !== null && event.totalBookings >= event.pax;
@@ -309,6 +351,152 @@ export default function EventDetailPage() {
     event.totalBookings !== null ? Math.max(event.pax - event.totalBookings, 0) : null;
   const creditsLeftAfterBooking =
     profile ? Math.max(profile.credits - event.price, 0) : null;
+
+  function getModalConfig() {
+    switch (modalMode) {
+      case 'confirm-book':
+        return {
+          title: 'Confirm booking',
+          description: `You are about to book ${currentEvent.title}.`,
+          details: (
+            <>
+              <p>
+                <span className="font-medium text-slate-900">
+                  Credits to deduct:
+                </span>{' '}
+                {currentEvent.price}
+              </p>
+              <p className="mt-2">
+                <span className="font-medium text-slate-900">
+                  Credits left after booking:
+                </span>{' '}
+                {creditsLeftAfterBooking ?? '-'}
+              </p>
+            </>
+          ),
+          confirmLabel: 'Confirm Booking',
+          hideConfirm: false,
+          messageTone: 'neutral' as const,
+        };
+
+      case 'book-success':
+        return {
+          title: 'Booking confirmed',
+          description: `Your booking for ${currentEvent.title} has been confirmed.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'success' as const,
+        };
+
+      case 'book-error':
+        return {
+          title: 'Booking failed',
+          description: `We could not complete your booking for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'error' as const,
+        };
+
+      case 'confirm-cancel-booking':
+        return {
+          title: 'Cancel booking',
+          description: `You are about to cancel your booking for ${currentEvent.title}.`,
+          details: <p>Any refund behavior will follow backend rules.</p>,
+          confirmLabel: 'Confirm Cancel',
+          hideConfirm: false,
+          messageTone: 'neutral' as const,
+        };
+
+      case 'cancel-booking-success':
+        return {
+          title: 'Booking cancelled',
+          description: `Your booking for ${currentEvent.title} has been cancelled.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'success' as const,
+        };
+
+      case 'cancel-booking-error':
+        return {
+          title: 'Cancel booking failed',
+          description: `We could not cancel your booking for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'error' as const,
+        };
+
+      case 'confirm-waitlist':
+        return {
+          title: 'Join waitlist',
+          description: `This event is full. Join the waitlist for ${currentEvent.title}?`,
+          details: (
+            <p>
+              You will be notified if a slot becomes available and you are
+              promoted.
+            </p>
+          ),
+          confirmLabel: 'Join Waitlist',
+          hideConfirm: false,
+          messageTone: 'neutral' as const,
+        };
+
+      case 'waitlist-success':
+        return {
+          title: 'Waitlist joined',
+          description: `You have joined the waitlist for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'success' as const,
+        };
+
+      case 'waitlist-error':
+        return {
+          title: 'Waitlist action failed',
+          description: `We could not add you to the waitlist for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'error' as const,
+        };
+
+      case 'confirm-cancel-waitlist':
+        return {
+          title: 'Leave waitlist',
+          description: `You are about to leave the waitlist for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Leave Waitlist',
+          hideConfirm: false,
+          messageTone: 'neutral' as const,
+        };
+
+      case 'cancel-waitlist-success':
+        return {
+          title: 'Waitlist removed',
+          description: `You have left the waitlist for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'success' as const,
+        };
+
+      case 'cancel-waitlist-error':
+        return {
+          title: 'Leave waitlist failed',
+          description: `We could not remove you from the waitlist for ${currentEvent.title}.`,
+          details: undefined,
+          confirmLabel: 'Confirm',
+          hideConfirm: true,
+          messageTone: 'error' as const,
+        };
+    }
+  }
+
+  const modalConfig = getModalConfig();
 
   return (
     <>
@@ -369,24 +557,38 @@ export default function EventDetailPage() {
                           <Button
                             variant="secondary"
                             className="w-auto px-5"
-                            onClick={handleOpenBookingModal}
+                            onClick={() => openModal('confirm-cancel-booking')}
                           >
                             Cancel Booking
                           </Button>
                         ) : isFull ? (
-                          <>
-                            <Button className="w-auto px-5" disabled>
-                              Event is Full
+                          isWaitlisted ? (
+                            <Button
+                              variant="secondary"
+                              className="w-auto px-5"
+                              onClick={() => openModal('confirm-cancel-waitlist')}
+                            >
+                              Leave Waitlist
                             </Button>
+                          ) : (
+                            <>
+                              <Button className="w-auto px-5" disabled>
+                                Event is Full
+                              </Button>
 
-                            <Button variant="secondary" className="w-auto px-5">
-                              Join Waitlist
-                            </Button>
-                          </>
+                              <Button
+                                variant="secondary"
+                                className="w-auto px-5"
+                                onClick={() => openModal('confirm-waitlist')}
+                              >
+                                Join Waitlist
+                              </Button>
+                            </>
+                          )
                         ) : (
                           <Button
                             className="w-auto px-5"
-                            onClick={handleOpenBookingModal}
+                            onClick={() => openModal('confirm-book')}
                           >
                             Book Event
                           </Button>
@@ -394,7 +596,7 @@ export default function EventDetailPage() {
                       ) : (
                         <Button
                           className="w-auto px-5"
-                          onClick={handleOpenBookingModal}
+                          onClick={() => requireLoginOr(() => openModal('confirm-book'))}
                         >
                           Book Event
                         </Button>
@@ -540,94 +742,22 @@ export default function EventDetailPage() {
         </div>
       </main>
 
-      {isBookingModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-xl font-semibold text-slate-900">
-              {isBooked ? 'Cancel booking' : 'Confirm booking'}
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {isBooked ? (
-                <>
-                  You are about to cancel your booking for{' '}
-                  <span className="font-medium text-slate-900">{event.title}</span>.
-                </>
-              ) : (
-                <>
-                  You are about to book{' '}
-                  <span className="font-medium text-slate-900">{event.title}</span>.
-                </>
-              )}
-            </p>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              {isBooked ? (
-                <p>
-                  Your booking will be cancelled immediately. Any refund behavior
-                  will follow backend rules.
-                </p>
-              ) : (
-                <>
-                  <p>
-                    <span className="font-medium text-slate-900">
-                      Credits to deduct:
-                    </span>{' '}
-                    {event.price}
-                  </p>
-                  <p className="mt-2">
-                    <span className="font-medium text-slate-900">
-                      Credits left after booking:
-                    </span>{' '}
-                    {creditsLeftAfterBooking ?? '-'}
-                  </p>
-                </>
-              )}
-            </div>
-
-            {bookingModalError ? (
-              <p className="mt-4 text-sm text-red-600">{bookingModalError}</p>
-            ) : null}
-
-            {bookingModalSuccess ? (
-              <p className="mt-4 text-sm text-green-600">{bookingModalSuccess}</p>
-            ) : null}
-
-            {bookingModalMessage ? (
-              <p className="mt-4 text-sm text-slate-600">{bookingModalMessage}</p>
-            ) : null}
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              {isBooked ? (
-                <Button
-                  className="w-auto px-5"
-                  onClick={handleCancelBooking}
-                  disabled={isBookingLoading}
-                >
-                  {isBookingLoading ? 'Cancelling...' : 'Confirm Cancel'}
-                </Button>
-              ) : (
-                <Button
-                  className="w-auto px-5"
-                  onClick={handleConfirmBooking}
-                  disabled={isBookingLoading}
-                >
-                  {isBookingLoading ? 'Confirming...' : 'Confirm Booking'}
-                </Button>
-              )}
-
-              <Button
-                variant="secondary"
-                className="w-auto px-5"
-                onClick={() => setIsBookingModalOpen(false)}
-                disabled={isBookingLoading}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ActionStatusModal
+        open={modalOpen}
+        title={modalConfig.title}
+        description={modalConfig.description}
+        details={modalConfig.details}
+        message={modalMessage}
+        messageTone={modalConfig.messageTone}
+        confirmLabel={modalConfig.confirmLabel}
+        hideConfirm={modalConfig.hideConfirm}
+        isLoading={isActionLoading}
+        onConfirm={handleConfirmModalAction}
+        onClose={() => {
+          setModalOpen(false);
+          setModalMessage('');
+        }}
+      />
     </>
   );
 }
