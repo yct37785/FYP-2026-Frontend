@@ -1,9 +1,17 @@
 import { apiFetch } from '@lib/api/client';
-import type { BookingItem, BookingStatusItem } from '@mytypes/booking';
+import type { EventItem } from '@mytypes/event';
+import type { BookingStatusItem } from '@mytypes/booking';
 
-export function createBooking(eventId: number): Promise<BookingItem> {
-  return apiFetch<BookingItem>(`/bookings/events/${eventId}`, {
+export function createBooking(eventId: number): Promise<EventItem> {
+  return apiFetch<EventItem>(`/bookings/events/${eventId}`, {
     method: 'POST',
+    auth: true,
+  });
+}
+
+export function getMyBookings(): Promise<{ count: number; items: EventItem[] }> {
+  return apiFetch<{ count: number; items: EventItem[] }>('/bookings/mine', {
+    method: 'GET',
     auth: true,
   });
 }
