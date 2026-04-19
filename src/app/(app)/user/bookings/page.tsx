@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageSkeleton } from '@components/ui/PageSkeleton';
+import { MyEventListPage } from '@components/event/MyEventListPage';
+import { getMyBookings } from '@lib/api/bookings';
+import type { EventItem } from '@mytypes/event';
 
 export default function UserBookingsPage() {
+  const [items, setItems] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadBookings() {
       try {
         setLoading(true);
+        setError('');
 
-        // replace this with your real API call later
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        setItems([]);
+        const result = await getMyBookings();
+        setItems(result.items);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load bookings');
       } finally {
@@ -24,27 +25,18 @@ export default function UserBookingsPage() {
       }
     }
 
-    void loadData();
+    void loadBookings();
   }, []);
 
-  if (loading) {
-    return <PageSkeleton />;
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-red-600">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">My Bookings</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        You have {items.length} bookings.
-      </p>
-    </div>
+    <MyEventListPage
+      title="My Bookings"
+      description="View all events you have booked."
+      items={items}
+      loading={loading}
+      error={error}
+      emptyTitle="No bookings yet"
+      emptyDescription="Events you book will appear here."
+    />
   );
 }
