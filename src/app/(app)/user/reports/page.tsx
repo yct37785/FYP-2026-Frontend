@@ -188,11 +188,11 @@ export default function UserReportsPage() {
                           href={target.href}
                           className="text-base font-semibold text-slate-900 transition hover:text-slate-700"
                         >
-                          {target.label}
+                          {report.eventTitle ?? target.label}
                         </Link>
                       ) : (
                         <span className="text-base font-semibold text-slate-900">
-                          {target.label}
+                          {report.eventTitle ?? target.label}
                         </span>
                       )}
 
