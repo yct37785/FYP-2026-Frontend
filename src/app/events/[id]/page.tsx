@@ -14,7 +14,10 @@ import { PublicNavbar } from '@components/layout/PublicNavbar';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { PageSkeleton } from '@components/ui/PageSkeleton';
-import { ActionStatusModal, type ActionModalMode } from '@components/ui/ActionStatusModal';
+import {
+  ActionStatusModal,
+  type ActionModalMode,
+} from '@components/ui/ActionStatusModal';
 import { ReviewList } from '@components/event/ReviewList';
 import { getPublicEventById } from '@lib/api/events';
 import { getEventReviews } from '@lib/api/reviews';
@@ -100,7 +103,8 @@ export default function EventDetailPage() {
 
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ActionModalMode>('confirm-book');
+  const [modalMode, setModalMode] =
+    useState<ActionModalMode>('confirm-book');
   const [modalMessage, setModalMessage] = useState('');
 
   const eventId = useMemo(() => Number(params.id), [params.id]);
@@ -232,7 +236,9 @@ export default function EventDetailPage() {
       setIsFavorited(status.isFavorited);
       setFavoriteId(status.favoriteId);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Failed to update favorite');
+      window.alert(
+        err instanceof Error ? err.message : 'Failed to update favorite'
+      );
     } finally {
       setIsFavoriteLoading(false);
     }
@@ -243,6 +249,7 @@ export default function EventDetailPage() {
       router.push('/login');
       return;
     }
+
     action();
   }
 
@@ -343,14 +350,19 @@ export default function EventDetailPage() {
       </main>
     );
   }
-  const currentEvent = event;
 
-  const mapsUrl = buildGoogleMapsUrl(event);
-  const isFull = event.totalBookings !== null && event.totalBookings >= event.pax;
+  const currentEvent = event;
+  const mapsUrl = buildGoogleMapsUrl(currentEvent);
+  const isFull =
+    currentEvent.totalBookings !== null &&
+    currentEvent.totalBookings >= currentEvent.pax;
   const remainingSlots =
-    event.totalBookings !== null ? Math.max(event.pax - event.totalBookings, 0) : null;
-  const creditsLeftAfterBooking =
-    profile ? Math.max(profile.credits - event.price, 0) : null;
+    currentEvent.totalBookings !== null
+      ? Math.max(currentEvent.pax - currentEvent.totalBookings, 0)
+      : null;
+  const creditsLeftAfterBooking = profile
+    ? Math.max(profile.credits - currentEvent.price, 0)
+    : null;
 
   function getModalConfig() {
     switch (modalMode) {
@@ -508,11 +520,11 @@ export default function EventDetailPage() {
             <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
               <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="min-h-[320px] bg-slate-200">
-                  {event.bannerUrl ? (
+                  {currentEvent.bannerUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={event.bannerUrl}
-                      alt={event.title}
+                      src={currentEvent.bannerUrl}
+                      alt={currentEvent.title}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -527,21 +539,22 @@ export default function EventDetailPage() {
                 <div className="flex items-center p-8">
                   <div className="w-full">
                     <p className={styles.text.eyebrow}>
-                      {event.categoryName || 'Event'}
+                      {currentEvent.categoryName || 'Event'}
                     </p>
 
                     <h1 className="mt-3 text-3xl font-semibold leading-tight text-slate-900">
-                      {event.title}
+                      {currentEvent.title}
                     </h1>
 
                     <p className="mt-4 text-sm leading-6 text-slate-600">
-                      {event.description}
+                      {currentEvent.description}
                     </p>
 
                     <div className="mt-6 flex flex-wrap gap-3">
-                      {event.source === 'EXTERNAL' && event.externalUrl ? (
+                      {currentEvent.source === 'EXTERNAL' &&
+                      currentEvent.externalUrl ? (
                         <a
-                          href={event.externalUrl}
+                          href={currentEvent.externalUrl}
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -566,7 +579,9 @@ export default function EventDetailPage() {
                             <Button
                               variant="secondary"
                               className="w-auto px-5"
-                              onClick={() => openModal('confirm-cancel-waitlist')}
+                              onClick={() =>
+                                openModal('confirm-cancel-waitlist')
+                              }
                             >
                               Leave Waitlist
                             </Button>
@@ -596,7 +611,9 @@ export default function EventDetailPage() {
                       ) : (
                         <Button
                           className="w-auto px-5"
-                          onClick={() => requireLoginOr(() => openModal('confirm-book'))}
+                          onClick={() =>
+                            requireLoginOr(() => openModal('confirm-book'))
+                          }
                         >
                           Book Event
                         </Button>
@@ -635,7 +652,7 @@ export default function EventDetailPage() {
                     About this event
                   </h2>
                   <p className="mt-4 text-sm leading-7 text-slate-700">
-                    {event.description}
+                    {currentEvent.description}
                   </p>
                 </Card>
 
@@ -659,7 +676,10 @@ export default function EventDetailPage() {
                           Date and time
                         </p>
                         <p className="mt-1 text-slate-600">
-                          {formatDateRange(event.startsAt, event.endsAt)}
+                          {formatDateRange(
+                            currentEvent.startsAt,
+                            currentEvent.endsAt
+                          )}
                         </p>
                       </div>
                     </div>
@@ -674,11 +694,11 @@ export default function EventDetailPage() {
                           rel="noreferrer"
                           className="mt-1 inline-block text-slate-600 underline underline-offset-2 transition hover:text-slate-900"
                         >
-                          {event.venue}
+                          {currentEvent.venue}
                           <br />
-                          {event.address}
+                          {currentEvent.address}
                           <br />
-                          {event.city}
+                          {currentEvent.city}
                         </a>
                       </div>
                     </div>
@@ -688,7 +708,7 @@ export default function EventDetailPage() {
                       <div>
                         <p className="font-medium text-slate-900">Price</p>
                         <p className="mt-1 text-slate-600">
-                          {formatPrice(event.price)}
+                          {formatPrice(currentEvent.price)}
                         </p>
                       </div>
                     </div>
@@ -697,7 +717,9 @@ export default function EventDetailPage() {
                       <UserRound size={18} className="mt-0.5 text-slate-500" />
                       <div>
                         <p className="font-medium text-slate-900">Organizer</p>
-                        <p className="mt-1 text-slate-600">{event.ownerName}</p>
+                        <p className="mt-1 text-slate-600">
+                          {currentEvent.ownerName}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -712,15 +734,15 @@ export default function EventDetailPage() {
                       <span className="font-medium text-slate-900">
                         Category:
                       </span>{' '}
-                      {event.categoryName || '-'}
+                      {currentEvent.categoryName || '-'}
                     </p>
                     <p>
                       <span className="font-medium text-slate-900">Pax:</span>{' '}
-                      {event.pax}
+                      {currentEvent.pax}
                     </p>
                     <p>
                       <span className="font-medium text-slate-900">Booked:</span>{' '}
-                      {event.totalBookings ?? '-'}
+                      {currentEvent.totalBookings ?? '-'}
                     </p>
                     <p>
                       <span className="font-medium text-slate-900">
@@ -732,7 +754,7 @@ export default function EventDetailPage() {
                       <span className="font-medium text-slate-900">
                         Source:
                       </span>{' '}
-                      {event.source}
+                      {currentEvent.source}
                     </p>
                   </div>
                 </Card>
