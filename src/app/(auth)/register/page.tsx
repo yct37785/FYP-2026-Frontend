@@ -12,9 +12,9 @@ import { register } from '@/lib/api/auth';
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [name, setName] = useState('Mary Lee');
-  const [email, setEmail] = useState('mary@example.com');
-  const [password, setPassword] = useState('password124');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<'user' | 'organizer'>('user');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,7 +78,6 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="password124"
                 autoComplete="new-password"
               />
             </div>

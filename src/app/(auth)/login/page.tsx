@@ -13,8 +13,8 @@ import { tokenStorage } from '@/lib/auth/token';
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('john@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,7 +61,6 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="password123"
                 autoComplete="current-password"
               />
             </div>
