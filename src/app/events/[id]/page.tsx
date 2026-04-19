@@ -17,6 +17,11 @@ import { PageSkeleton } from '@components/ui/PageSkeleton';
 import { ReviewList } from '@components/event/ReviewList';
 import { getPublicEventById } from '@lib/api/events';
 import { getEventReviews } from '@lib/api/reviews';
+import {
+  createFavorite,
+  deleteMyFavorite,
+  getFavoriteStatus,
+} from '@lib/api/favorites';
 import { tokenStorage } from '@lib/auth/token';
 import { styles } from '@styles/styles';
 import type { EventItem } from '@mytypes/event';
@@ -67,6 +72,10 @@ export default function EventDetailPage() {
   const [error, setError] = useState('');
   const [hasToken, setHasToken] = useState(false);
 
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteId, setFavoriteId] = useState<number | null>(null);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
   const eventId = useMemo(() => Number(params.id), [params.id]);
 
   useEffect(() => {
@@ -99,6 +108,52 @@ export default function EventDetailPage() {
 
     void loadPage();
   }, [eventId]);
+
+  useEffect(() => {
+    async function loadFavoriteStatus() {
+      if (!hasToken || Number.isNaN(eventId)) {
+        setIsFavorited(false);
+        setFavoriteId(null);
+        return;
+      }
+
+      try {
+        const result = await getFavoriteStatus(eventId);
+        setIsFavorited(result.isFavorited);
+        setFavoriteId(result.favoriteId);
+      } catch {
+        setIsFavorited(false);
+        setFavoriteId(null);
+      }
+    }
+
+    void loadFavoriteStatus();
+  }, [hasToken, eventId]);
+
+  async function handleFavoriteToggle() {
+    if (!event) return;
+
+    try {
+      setIsFavoriteLoading(true);
+
+      if (isFavorited && favoriteId) {
+        await deleteMyFavorite(favoriteId);
+        setIsFavorited(false);
+        setFavoriteId(null);
+        return;
+      }
+
+      await createFavorite(event.id);
+
+      const status = await getFavoriteStatus(event.id);
+      setIsFavorited(status.isFavorited);
+      setFavoriteId(status.favoriteId);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Failed to update favorite');
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -135,8 +190,9 @@ export default function EventDetailPage() {
   }
 
   const mapsUrl = buildGoogleMapsUrl(event);
-  const isFull = event.totalBookings >= event.pax;
-  const remainingSlots = Math.max(event.pax - event.totalBookings, 0);
+  const isFull = event.totalBookings !== null && event.totalBookings >= event.pax;
+  const remainingSlots =
+    event.totalBookings !== null ? Math.max(event.pax - event.totalBookings, 0) : null;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -213,9 +269,26 @@ export default function EventDetailPage() {
                       </Link>
                     )}
 
-                    <Button variant="secondary" className="w-auto px-5">
-                      Bookmark
-                    </Button>
+                    {hasToken ? (
+                      <Button
+                        variant="secondary"
+                        className="w-auto px-5"
+                        onClick={handleFavoriteToggle}
+                        disabled={isFavoriteLoading}
+                      >
+                        {isFavoriteLoading
+                          ? 'Updating...'
+                          : isFavorited
+                          ? 'Remove Favorite'
+                          : 'Favorite'}
+                      </Button>
+                    ) : (
+                      <Link href="/login">
+                        <Button variant="secondary" className="w-auto px-5">
+                          Favorite
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
@@ -314,13 +387,13 @@ export default function EventDetailPage() {
                   </p>
                   <p>
                     <span className="font-medium text-slate-900">Booked:</span>{' '}
-                    {event.totalBookings}
+                    {event.totalBookings ?? '-'}
                   </p>
                   <p>
                     <span className="font-medium text-slate-900">
                       Remaining slots:
                     </span>{' '}
-                    {remainingSlots}
+                    {remainingSlots ?? '-'}
                   </p>
                   <p>
                     <span className="font-medium text-slate-900">
