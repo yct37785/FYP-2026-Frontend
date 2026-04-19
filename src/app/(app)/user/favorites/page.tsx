@@ -1,10 +1,42 @@
-export default function PlaceholderPage() {
+'use client';
+
+import { useEffect, useState } from 'react';
+import { MyEventListPage } from '@components/event/MyEventListPage';
+import { getMyFavorites } from '@lib/api/favorites';
+import type { EventItem } from '@mytypes/event';
+
+export default function UserFavoritesPage() {
+  const [items, setItems] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function loadFavorites() {
+      try {
+        setLoading(true);
+        setError('');
+
+        const result = await getMyFavorites();
+        setItems(result.items);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load favorites');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadFavorites();
+  }, []);
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">Coming soon</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        This page has not been built yet.
-      </p>
-    </div>
+    <MyEventListPage
+      title="My Favorites"
+      description="View all events you have favorited."
+      items={items}
+      loading={loading}
+      error={error}
+      emptyTitle="No favorites yet"
+      emptyDescription="Events you favorite will appear here."
+    />
   );
 }

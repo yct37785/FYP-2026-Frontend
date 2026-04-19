@@ -9,15 +9,15 @@ export function createFavorite(eventId: number): Promise<EventItem> {
   });
 }
 
-export function getFavoriteStatus(eventId: number): Promise<FavoriteStatusItem> {
-  return apiFetch<FavoriteStatusItem>(`/favorites/events/${eventId}/status`, {
+export function getMyFavorites(): Promise<{ count: number; items: EventItem[] }> {
+  return apiFetch<{ count: number; items: EventItem[] }>('/favorites/mine', {
     method: 'GET',
     auth: true,
   });
 }
 
-export function getMyFavorites(): Promise<{ count: number; items: EventItem[] }> {
-  return apiFetch<{ count: number; items: EventItem[] }>('/favorites/mine', {
+export function getFavoriteStatus(eventId: number): Promise<FavoriteStatusItem> {
+  return apiFetch<FavoriteStatusItem>(`/favorites/events/${eventId}/status`, {
     method: 'GET',
     auth: true,
   });

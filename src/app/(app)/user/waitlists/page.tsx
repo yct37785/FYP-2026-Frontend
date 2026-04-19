@@ -1,10 +1,42 @@
-export default function PlaceholderPage() {
+'use client';
+
+import { useEffect, useState } from 'react';
+import { MyEventListPage } from '@components/event/MyEventListPage';
+import { getMyWaitlists } from '@lib/api/waitlists';
+import type { EventItem } from '@mytypes/event';
+
+export default function UserWaitlistsPage() {
+  const [items, setItems] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function loadWaitlists() {
+      try {
+        setLoading(true);
+        setError('');
+
+        const result = await getMyWaitlists();
+        setItems(result.items);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load waitlists');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadWaitlists();
+  }, []);
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">Coming soon</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        This page has not been built yet.
-      </p>
-    </div>
+    <MyEventListPage
+      title="My Waitlists"
+      description="View all events you are currently waitlisted for."
+      items={items}
+      loading={loading}
+      error={error}
+      emptyTitle="No waitlists yet"
+      emptyDescription="Events you join the waitlist for will appear here."
+    />
   );
 }
