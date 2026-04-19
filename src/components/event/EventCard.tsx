@@ -6,6 +6,7 @@ import { styles } from '@styles/styles';
 
 interface EventCardProps {
   event: EventItem;
+  href?: string;
 }
 
 function formatDateRange(startsAt: string, endsAt: string) {
@@ -33,12 +34,9 @@ function formatPrice(price: number) {
   return `$${price.toFixed(2)}`;
 }
 
-export function EventCard({ event }: EventCardProps) {
+function EventCardContent({ event }: { event: EventItem }) {
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-    >
+    <>
       <div className="aspect-[16/9] w-full overflow-hidden bg-slate-200">
         {event.bannerUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -65,9 +63,7 @@ export function EventCard({ event }: EventCardProps) {
             </h3>
           </div>
 
-          <div className={styles.badge.primary}>
-            {formatPrice(event.price)}
-          </div>
+          <div className={styles.badge.primary}>{formatPrice(event.price)}</div>
         </div>
 
         <p className="line-clamp-2 text-sm text-slate-600">
@@ -82,6 +78,25 @@ export function EventCard({ event }: EventCardProps) {
           <p className="line-clamp-1">by {event.ownerName}</p>
         </div>
       </div>
-    </Link>
+    </>
+  );
+}
+
+export function EventCard({ event, href }: EventCardProps) {
+  const className =
+    'group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md';
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        <EventCardContent event={event} />
+      </Link>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <EventCardContent event={event} />
+    </div>
   );
 }

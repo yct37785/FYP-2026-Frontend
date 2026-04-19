@@ -148,7 +148,7 @@ export default function HomePage() {
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {items.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                    <EventCard key={event.id} event={event} href={`/events/${event.id}`} />
                   ))}
                 </div>
               )}
