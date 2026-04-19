@@ -9,6 +9,7 @@ import {
   UserRound,
   Ticket,
   ExternalLink,
+  PenSquare,
 } from 'lucide-react';
 import { PublicNavbar } from '@components/layout/PublicNavbar';
 import { Card } from '@components/ui/Card';
@@ -18,9 +19,18 @@ import {
   ActionStatusModal,
   type ActionModalMode,
 } from '@components/ui/ActionStatusModal';
-import { ReviewList } from '@components/event/ReviewList';
+import { ReviewCard } from '@components/review/ReviewCard';
+import {
+  ReviewModal,
+  type ReviewModalMode,
+} from '@components/review/ReviewModal';
 import { getPublicEventById } from '@lib/api/events';
-import { getEventReviews } from '@lib/api/reviews';
+import {
+  createReview,
+  deleteMyReview,
+  getEventReviews,
+  updateMyReview,
+} from '@lib/api/reviews';
 import {
   createBooking,
   deleteMyBooking,
@@ -107,6 +117,13 @@ export default function EventDetailPage() {
     useState<ActionModalMode>('confirm-book');
   const [modalMessage, setModalMessage] = useState('');
 
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewModalMode, setReviewModalMode] =
+    useState<ReviewModalMode>('create');
+  const [selectedReview, setSelectedReview] = useState<ReviewItem | null>(null);
+  const [reviewModalError, setReviewModalError] = useState('');
+  const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
+
   const eventId = useMemo(() => Number(params.id), [params.id]);
 
   useEffect(() => {
@@ -192,6 +209,12 @@ export default function EventDetailPage() {
     setEvent(refreshed);
   }
 
+  async function refreshReviews() {
+    if (Number.isNaN(eventId)) return;
+    const refreshed = await getEventReviews(eventId);
+    setReviews(refreshed.items);
+  }
+
   async function refreshStatuses() {
     if (!hasToken || Number.isNaN(eventId)) return;
 
@@ -253,7 +276,7 @@ export default function EventDetailPage() {
     action();
   }
 
-  function openModal(mode: ActionModalMode) {
+  function openActionModal(mode: ActionModalMode) {
     setModalMode(mode);
     setModalMessage('');
     setModalOpen(true);
@@ -317,6 +340,80 @@ export default function EventDetailPage() {
     }
   }
 
+  function openCreateReviewModal() {
+    setSelectedReview(null);
+    setReviewModalMode('create');
+    setReviewModalError('');
+    setReviewModalOpen(true);
+  }
+
+  function openEditReviewModal(review: ReviewItem) {
+    setSelectedReview(review);
+    setReviewModalMode('edit');
+    setReviewModalError('');
+    setReviewModalOpen(true);
+  }
+
+  function openDeleteReviewModal(review: ReviewItem) {
+    setSelectedReview(review);
+    setReviewModalMode('delete');
+    setReviewModalError('');
+    setReviewModalOpen(true);
+  }
+
+  async function handleReviewSubmit(payload: {
+    rating: number;
+    comment: string;
+  }) {
+    try {
+      setIsReviewSubmitting(true);
+      setReviewModalError('');
+
+      if (reviewModalMode === 'create') {
+        await createReview(eventId, {
+          rating: payload.rating,
+          comment: payload.comment.trim(),
+        });
+      } else if (reviewModalMode === 'edit' && selectedReview) {
+        await updateMyReview(selectedReview.id, {
+          rating: payload.rating,
+          comment: payload.comment.trim(),
+        });
+      }
+
+      await refreshReviews();
+      setReviewModalOpen(false);
+      setSelectedReview(null);
+    } catch (err) {
+      setReviewModalError(
+        err instanceof Error ? err.message : 'Failed to submit review'
+      );
+    } finally {
+      setIsReviewSubmitting(false);
+    }
+  }
+
+  async function handleReviewDelete() {
+    if (!selectedReview) return;
+
+    try {
+      setIsReviewSubmitting(true);
+      setReviewModalError('');
+
+      await deleteMyReview(selectedReview.id);
+      await refreshReviews();
+
+      setReviewModalOpen(false);
+      setSelectedReview(null);
+    } catch (err) {
+      setReviewModalError(
+        err instanceof Error ? err.message : 'Failed to delete review'
+      );
+    } finally {
+      setIsReviewSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -352,6 +449,10 @@ export default function EventDetailPage() {
   }
 
   const currentEvent = event;
+  const now = new Date();
+  const eventStarted = new Date(currentEvent.startsAt) <= now;
+  const eventEnded = new Date(currentEvent.endsAt) <= now;
+
   const mapsUrl = buildGoogleMapsUrl(currentEvent);
   const isFull =
     currentEvent.totalBookings !== null &&
@@ -363,6 +464,16 @@ export default function EventDetailPage() {
   const creditsLeftAfterBooking = profile
     ? Math.max(profile.credits - currentEvent.price, 0)
     : null;
+
+  const myOwnReview =
+    profile ? reviews.find((review) => review.userId === profile.id) ?? null : null;
+
+  const canWriteReview =
+    hasToken &&
+    currentEvent.source === 'INTERNAL' &&
+    eventEnded &&
+    isBooked &&
+    !myOwnReview;
 
   function getModalConfig() {
     switch (modalMode) {
@@ -565,12 +676,16 @@ export default function EventDetailPage() {
                             </span>
                           </Button>
                         </a>
+                      ) : eventStarted ? (
+                        <Button className="w-auto px-5" disabled>
+                          Event Started
+                        </Button>
                       ) : hasToken ? (
                         isBooked ? (
                           <Button
                             variant="secondary"
                             className="w-auto px-5"
-                            onClick={() => openModal('confirm-cancel-booking')}
+                            onClick={() => openActionModal('confirm-cancel-booking')}
                           >
                             Cancel Booking
                           </Button>
@@ -580,7 +695,7 @@ export default function EventDetailPage() {
                               variant="secondary"
                               className="w-auto px-5"
                               onClick={() =>
-                                openModal('confirm-cancel-waitlist')
+                                openActionModal('confirm-cancel-waitlist')
                               }
                             >
                               Leave Waitlist
@@ -594,7 +709,7 @@ export default function EventDetailPage() {
                               <Button
                                 variant="secondary"
                                 className="w-auto px-5"
-                                onClick={() => openModal('confirm-waitlist')}
+                                onClick={() => openActionModal('confirm-waitlist')}
                               >
                                 Join Waitlist
                               </Button>
@@ -603,7 +718,7 @@ export default function EventDetailPage() {
                         ) : (
                           <Button
                             className="w-auto px-5"
-                            onClick={() => openModal('confirm-book')}
+                            onClick={() => openActionModal('confirm-book')}
                           >
                             Book Event
                           </Button>
@@ -612,7 +727,7 @@ export default function EventDetailPage() {
                         <Button
                           className="w-auto px-5"
                           onClick={() =>
-                            requireLoginOr(() => openModal('confirm-book'))
+                            requireLoginOr(() => openActionModal('confirm-book'))
                           }
                         >
                           Book Event
@@ -639,7 +754,26 @@ export default function EventDetailPage() {
                           </Button>
                         </Link>
                       )}
+
+                      {canWriteReview ? (
+                        <Button
+                          variant="secondary"
+                          className="w-auto px-5"
+                          onClick={openCreateReviewModal}
+                        >
+                          <span className="flex items-center gap-2">
+                            <PenSquare size={16} />
+                            Write Review
+                          </span>
+                        </Button>
+                      ) : null}
                     </div>
+
+                    {eventEnded && !isBooked ? (
+                      <p className="mt-4 text-sm text-slate-500">
+                        Reviews are only available for users who booked this event.
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -656,7 +790,36 @@ export default function EventDetailPage() {
                   </p>
                 </Card>
 
-                <ReviewList items={reviews} />
+                <section className="space-y-4">
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      Reviews
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      See what attendees thought about this event.
+                    </p>
+                  </div>
+
+                  {reviews.length === 0 ? (
+                    <Card>
+                      <p className="text-sm text-slate-600">
+                        No reviews yet for this event.
+                      </p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((review) => (
+                        <ReviewCard
+                          key={review.id}
+                          review={review}
+                          canManage={Boolean(profile && review.userId === profile.id)}
+                          onEdit={openEditReviewModal}
+                          onDelete={openDeleteReviewModal}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
               </section>
 
               <aside className="space-y-6">
@@ -779,6 +942,21 @@ export default function EventDetailPage() {
           setModalOpen(false);
           setModalMessage('');
         }}
+      />
+
+      <ReviewModal
+        open={reviewModalOpen}
+        mode={reviewModalMode}
+        review={selectedReview}
+        isLoading={isReviewSubmitting}
+        error={reviewModalError}
+        onClose={() => {
+          setReviewModalOpen(false);
+          setSelectedReview(null);
+          setReviewModalError('');
+        }}
+        onSubmit={handleReviewSubmit}
+        onDelete={handleReviewDelete}
       />
     </>
   );
