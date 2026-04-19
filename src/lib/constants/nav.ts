@@ -10,6 +10,7 @@ import {
   CalendarDays,
   PlusSquare,
   Shield,
+  Database,
 } from 'lucide-react';
 import type { UserRole } from '@mytypes/user';
 
@@ -38,6 +39,7 @@ const organizerNav: NavItem[] = [
 const adminNav: NavItem[] = [
   ...organizerNav,
   { label: 'Admin Reports', href: '/admin/reports', icon: Shield },
+  { label: 'Sync Logs', href: '/admin/sync-logs', icon: Database },
 ];
 
 export function getNavItems(role: UserRole): NavItem[] {
