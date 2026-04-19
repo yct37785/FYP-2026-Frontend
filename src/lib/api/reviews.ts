@@ -1,5 +1,9 @@
 import { apiFetch } from '@lib/api/client';
-import type { GetEventReviewsResponse, ReviewItem } from '@mytypes/review';
+import type {
+  GetEventReviewsResponse,
+  GetMyReviewsResponse,
+  ReviewItem,
+} from '@mytypes/review';
 
 export interface ReviewUpsertInput {
   rating: number;
@@ -11,6 +15,13 @@ export function getEventReviews(
 ): Promise<GetEventReviewsResponse> {
   return apiFetch<GetEventReviewsResponse>(`/reviews/events/${eventId}`, {
     method: 'GET',
+  });
+}
+
+export function getMyReviews(): Promise<GetMyReviewsResponse> {
+  return apiFetch<GetMyReviewsResponse>('/reviews/mine', {
+    method: 'GET',
+    auth: true,
   });
 }
 

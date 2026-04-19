@@ -3,6 +3,7 @@ export interface ReviewItem {
   userId: number;
   userName: string;
   eventId: number;
+  eventTitle?: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -10,6 +11,11 @@ export interface ReviewItem {
 }
 
 export interface GetEventReviewsResponse {
+  count: number;
+  items: ReviewItem[];
+}
+
+export interface GetMyReviewsResponse {
   count: number;
   items: ReviewItem[];
 }
