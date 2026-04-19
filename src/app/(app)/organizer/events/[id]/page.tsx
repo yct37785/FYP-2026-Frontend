@@ -70,6 +70,8 @@ export default function OrganizerEventDetailPage() {
   const [saving, setSaving] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState('');
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveMessageType, setSaveMessageType] = useState<'success' | 'error' | ''>('');
 
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState('');
@@ -185,12 +187,16 @@ export default function OrganizerEventDetailPage() {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      setSaveMessage('');
+      setSaveMessageType('');
       return;
     }
 
     try {
       setSaving(true);
       setError('');
+      setSaveMessage('');
+      setSaveMessageType('');
 
       const updated = await updateMyOrganizerEvent(event.id, {
         title: form.title.trim(),
@@ -209,8 +215,16 @@ export default function OrganizerEventDetailPage() {
       setEvent(updated);
       setForm(buildInitialForm(updated));
       clearBannerSelection();
+
+      setSaveMessage('Event updated successfully.');
+      setSaveMessageType('success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update event');
+      const message =
+        err instanceof Error ? err.message : 'Failed to update event';
+
+      setError(message);
+      setSaveMessage(message);
+      setSaveMessageType('error');
     } finally {
       setSaving(false);
     }
@@ -622,6 +636,15 @@ export default function OrganizerEventDetailPage() {
             <Card>
               <p className="text-sm text-red-600">{error}</p>
             </Card>
+          ) : null}
+
+          {saveMessage ? (
+            <p
+              className={`text-sm ${saveMessageType === 'success' ? 'text-green-600' : 'text-red-600'
+                }`}
+            >
+              {saveMessage}
+            </p>
           ) : null}
 
           <div className="flex flex-wrap gap-3">
