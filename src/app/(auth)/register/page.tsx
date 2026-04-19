@@ -7,14 +7,15 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { styles } from '@/styles/styles';
-import { login } from '@/lib/api/auth';
-import { tokenStorage } from '@/lib/auth/token';
+import { register } from '@/lib/api/auth';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState('john@example.com');
-  const [password, setPassword] = useState('password123');
+  const [name, setName] = useState('Mary Lee');
+  const [email, setEmail] = useState('mary@example.com');
+  const [password, setPassword] = useState('password124');
+  const [role, setRole] = useState<'user' | 'organizer'>('user');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,11 +25,16 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await login(email, password);
-      tokenStorage.set(result.token);
-      router.push('/user');
+      await register({
+        name,
+        email,
+        password,
+        role,
+      });
+
+      router.push('/login');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -38,19 +44,30 @@ export default function LoginPage() {
     <main className={`${styles.layout.page} ${styles.layout.center}`}>
       <div className={styles.layout.container}>
         <Card>
-          <h1 className={styles.text.title}>Login</h1>
+          <h1 className={styles.text.title}>Register</h1>
           <p className={styles.text.subtitle}>
-            Sign in with your email and password.
+            Create an account to start browsing or organizing events.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <label className={styles.text.label}>Name</label>
+              <Input
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Mary Lee"
+                autoComplete="name"
+              />
+            </div>
+
             <div>
               <label className={styles.text.label}>Email</label>
               <Input
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="john@example.com"
+                placeholder="mary@example.com"
                 autoComplete="email"
               />
             </div>
@@ -61,25 +78,39 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="password123"
-                autoComplete="current-password"
+                placeholder="password124"
+                autoComplete="new-password"
               />
+            </div>
+
+            <div>
+              <label className={styles.text.label}>Role</label>
+              <select
+                value={role}
+                onChange={(event) =>
+                  setRole(event.target.value as 'user' | 'organizer')
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
+              >
+                <option value="user">User</option>
+                <option value="organizer">Organizer</option>
+              </select>
             </div>
 
             {error ? <p className={styles.text.error}>{error}</p> : null}
 
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing in...' : 'Login'}
+              {isSubmitting ? 'Creating account...' : 'Register'}
             </Button>
           </form>
 
           <p className="mt-6 text-sm text-slate-600">
-            Don&apos;t have an account?{' '}
+            Already have an account?{' '}
             <Link
-              href="/register"
+              href="/login"
               className="font-medium text-slate-900 underline underline-offset-2"
             >
-              Register
+              Login
             </Link>
           </p>
         </Card>
