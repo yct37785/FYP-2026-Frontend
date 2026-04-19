@@ -14,11 +14,11 @@ export function Sidebar({ items, collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`hidden shrink-0 border-r border-slate-200 bg-white transition-all duration-200 md:block ${
+      className={`hidden h-full shrink-0 border-r border-slate-200 bg-white transition-all duration-200 md:block ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >
-      <nav className="px-3 py-4">
+      <nav className="h-full px-3 py-4">
         <ul className="space-y-1">
           {items.map((item) => {
             const isActive = pathname === item.href;
