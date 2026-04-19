@@ -5,6 +5,7 @@ import type { UserProfile } from '@mytypes/user';
 
 interface AppSessionValue {
   profile: UserProfile;
+  setProfile: (profile: UserProfile) => void;
 }
 
 const AppSessionContext = createContext<AppSessionValue | null>(null);

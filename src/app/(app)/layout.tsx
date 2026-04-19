@@ -102,7 +102,7 @@ export default function ProtectedLayout({
   }
 
   return (
-    <AppSessionProvider value={{ profile }}>
+    <AppSessionProvider value={{ profile, setProfile }}>
       <AppShell role={profile.role} onLogout={handleLogout}>
         {children}
       </AppShell>

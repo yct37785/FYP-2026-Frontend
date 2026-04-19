@@ -16,3 +16,18 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UpdateMyProfileInput {
+  name?: string;
+  profilePicUrl?: string | null;
+  description?: string | null;
+  gender?: UserGender | null;
+  age?: number | null;
+}
+
+export interface MeCategoryItem {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  createdAt: string;
+}
