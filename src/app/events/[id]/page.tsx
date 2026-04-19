@@ -135,10 +135,8 @@ export default function EventDetailPage() {
   }
 
   const mapsUrl = buildGoogleMapsUrl(event);
-
-  // TODO: replace with real backend-driven value once public event payload includes
-  // bookingCount / remainingSlots / isFull.
-  const isFull = false;
+  const isFull = event.totalBookings >= event.pax;
+  const remainingSlots = Math.max(event.pax - event.totalBookings, 0);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -196,10 +194,7 @@ export default function EventDetailPage() {
                     ) : hasToken ? (
                       isFull ? (
                         <>
-                          <Button
-                            className="w-auto px-5"
-                            disabled
-                          >
+                          <Button className="w-auto px-5" disabled>
                             Event is Full
                           </Button>
 
@@ -316,6 +311,16 @@ export default function EventDetailPage() {
                   <p>
                     <span className="font-medium text-slate-900">Pax:</span>{' '}
                     {event.pax}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-900">Booked:</span>{' '}
+                    {event.totalBookings}
+                  </p>
+                  <p>
+                    <span className="font-medium text-slate-900">
+                      Remaining slots:
+                    </span>{' '}
+                    {remainingSlots}
                   </p>
                   <p>
                     <span className="font-medium text-slate-900">

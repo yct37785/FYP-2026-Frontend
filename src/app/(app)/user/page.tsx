@@ -209,11 +209,10 @@ export default function UserPage() {
                   onChange={(event) => handleChange('gender', event.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 >
-                  <option value="">Select gender</option>
+                  <option value="">Prefer not to say</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
-                  <option value="prefer_not_to_say">Prefer not to say</option>
                 </select>
               </div>
 
