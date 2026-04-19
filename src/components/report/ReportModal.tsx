@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { Button } from '@components/ui/Button';
 import type { ReportItem } from '@mytypes/report';
 
-export type ReportModalMode = 'edit' | 'delete';
+export type ReportModalMode = 'create' | 'edit' | 'delete';
 
 interface ReportModalProps {
   open: boolean;
   mode: ReportModalMode;
   report: ReportItem | null;
+  titleOverride?: string;
+  descriptionOverride?: string;
   isLoading?: boolean;
   error?: string;
   onClose: () => void;
@@ -21,6 +23,8 @@ export function ReportModal({
   open,
   mode,
   report,
+  titleOverride,
+  descriptionOverride,
   isLoading = false,
   error = '',
   onClose,
@@ -33,19 +37,39 @@ export function ReportModal({
   useEffect(() => {
     if (!open) return;
 
+    if (mode === 'create') {
+      setReason('');
+      setDetails('');
+      return;
+    }
+
     setReason(report?.reason ?? '');
     setDetails(report?.details ?? '');
-  }, [open, report]);
+  }, [open, mode, report]);
 
-  if (!open || !report) {
+  if (!open) {
     return null;
   }
 
-  const title = mode === 'edit' ? 'Edit report' : 'Delete report';
+  if ((mode === 'edit' || mode === 'delete') && !report) {
+    return null;
+  }
+
+  const title =
+    titleOverride ??
+    (mode === 'create'
+      ? 'Report content'
+      : mode === 'edit'
+      ? 'Edit report'
+      : 'Delete report');
+
   const description =
-    mode === 'edit'
+    descriptionOverride ??
+    (mode === 'create'
+      ? 'Tell us what is inappropriate or problematic.'
+      : mode === 'edit'
       ? 'Update the report reason and details below.'
-      : 'Are you sure you want to delete this report? This action cannot be undone.';
+      : 'Are you sure you want to delete this report? This action cannot be undone.');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
@@ -112,7 +136,13 @@ export function ReportModal({
                 }
                 disabled={isLoading || !reason.trim()}
               >
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading
+                  ? mode === 'create'
+                    ? 'Submitting...'
+                    : 'Saving...'
+                  : mode === 'create'
+                  ? 'Submit Report'
+                  : 'Save Changes'}
               </Button>
 
               <Button

@@ -1,15 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Star } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Star,
+  Flag,
+} from 'lucide-react';
 import type { ReviewItem } from '@mytypes/review';
 
 interface ReviewCardProps {
   review: ReviewItem;
   canManage: boolean;
+  canReport?: boolean;
   isSuspended?: boolean;
   onEdit?: (review: ReviewItem) => void;
   onDelete?: (review: ReviewItem) => void;
+  onReport?: (review: ReviewItem) => void;
 }
 
 function formatDate(value: string) {
@@ -39,9 +47,11 @@ function renderStars(rating: number) {
 export function ReviewCard({
   review,
   canManage,
+  canReport = false,
   isSuspended = false,
   onEdit,
   onDelete,
+  onReport,
 }: ReviewCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -64,6 +74,8 @@ export function ReviewCard({
     };
   }, [menuOpen]);
 
+  const showMenu = canManage || canReport;
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -82,7 +94,7 @@ export function ReviewCard({
           </div>
         </div>
 
-        {canManage ? (
+        {showMenu ? (
           <div className="relative shrink-0" ref={menuRef}>
             <button
               type="button"
@@ -96,29 +108,47 @@ export function ReviewCard({
 
             {menuOpen ? (
               <div className="absolute right-0 top-12 z-10 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onEdit?.(review);
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Pencil size={15} />
-                  Edit review
-                </button>
+                {canManage ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onEdit?.(review);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Pencil size={15} />
+                      Edit review
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDelete?.(review);
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
-                >
-                  <Trash2 size={15} />
-                  Delete review
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onDelete?.(review);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+                    >
+                      <Trash2 size={15} />
+                      Delete review
+                    </button>
+                  </>
+                ) : null}
+
+                {canReport ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onReport?.(review);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <Flag size={15} />
+                    Report review
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>

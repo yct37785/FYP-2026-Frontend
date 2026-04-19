@@ -10,6 +10,7 @@ import {
   Ticket,
   ExternalLink,
   PenSquare,
+  Flag,
 } from 'lucide-react';
 import { PublicNavbar } from '@components/layout/PublicNavbar';
 import { Card } from '@components/ui/Card';
@@ -24,6 +25,10 @@ import {
   ReviewModal,
   type ReviewModalMode,
 } from '@components/review/ReviewModal';
+import {
+  ReportModal,
+  type ReportModalMode,
+} from '@components/report/ReportModal';
 import { getPublicEventById } from '@lib/api/events';
 import {
   createReview,
@@ -31,6 +36,10 @@ import {
   getEventReviews,
   updateMyReview,
 } from '@lib/api/reviews';
+import {
+  createEventReport,
+  createReviewReport,
+} from '@lib/api/reports';
 import {
   createBooking,
   deleteMyBooking,
@@ -51,6 +60,7 @@ import { tokenStorage } from '@lib/auth/token';
 import { styles } from '@styles/styles';
 import type { EventItem } from '@mytypes/event';
 import type { ReviewItem } from '@mytypes/review';
+import type { ReportItem } from '@mytypes/report';
 import type { UserProfile } from '@mytypes/user';
 
 function formatDateRange(startsAt: string, endsAt: string) {
@@ -123,6 +133,17 @@ export default function EventDetailPage() {
   const [selectedReview, setSelectedReview] = useState<ReviewItem | null>(null);
   const [reviewModalError, setReviewModalError] = useState('');
   const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
+
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalMode, setReportModalMode] =
+    useState<ReportModalMode>('create');
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [reportTargetType, setReportTargetType] =
+    useState<'event' | 'review'>('event');
+  const [selectedReviewForReport, setSelectedReviewForReport] =
+    useState<ReviewItem | null>(null);
+  const [reportModalError, setReportModalError] = useState('');
+  const [isReportSubmitting, setIsReportSubmitting] = useState(false);
 
   const eventId = useMemo(() => Number(params.id), [params.id]);
 
@@ -361,6 +382,24 @@ export default function EventDetailPage() {
     setReviewModalOpen(true);
   }
 
+  function openEventReportModal() {
+    setSelectedReport(null);
+    setSelectedReviewForReport(null);
+    setReportTargetType('event');
+    setReportModalMode('create');
+    setReportModalError('');
+    setReportModalOpen(true);
+  }
+
+  function openReviewReportModal(review: ReviewItem) {
+    setSelectedReport(null);
+    setSelectedReviewForReport(review);
+    setReportTargetType('review');
+    setReportModalMode('create');
+    setReportModalError('');
+    setReportModalOpen(true);
+  }
+
   async function handleReviewSubmit(payload: {
     rating: number;
     comment: string;
@@ -411,6 +450,40 @@ export default function EventDetailPage() {
       );
     } finally {
       setIsReviewSubmitting(false);
+    }
+  }
+
+  async function handleReportSubmit(payload: {
+    reason: string;
+    details: string;
+  }) {
+    if (!event) return;
+
+    try {
+      setIsReportSubmitting(true);
+      setReportModalError('');
+
+      if (reportTargetType === 'event') {
+        await createEventReport(event.id, {
+          reason: payload.reason,
+          details: payload.details ? payload.details : null,
+        });
+      } else if (reportTargetType === 'review' && selectedReviewForReport) {
+        await createReviewReport(selectedReviewForReport.id, {
+          reason: payload.reason,
+          details: payload.details ? payload.details : null,
+        });
+      }
+
+      setReportModalOpen(false);
+      setSelectedReviewForReport(null);
+      setSelectedReport(null);
+    } catch (err) {
+      setReportModalError(
+        err instanceof Error ? err.message : 'Failed to submit report'
+      );
+    } finally {
+      setIsReportSubmitting(false);
     }
   }
 
@@ -767,6 +840,16 @@ export default function EventDetailPage() {
                           </span>
                         </Button>
                       ) : null}
+
+                      <Button
+                        variant="secondary"
+                        className="w-auto px-5"
+                        onClick={() => requireLoginOr(openEventReportModal)}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Flag size={16} />
+                        </span>
+                      </Button>
                     </div>
 
                     {eventEnded && !isBooked ? (
@@ -813,8 +896,12 @@ export default function EventDetailPage() {
                           key={review.id}
                           review={review}
                           canManage={Boolean(profile && review.userId === profile.id)}
+                          canReport={Boolean(!profile || review.userId !== profile.id)}
                           onEdit={openEditReviewModal}
                           onDelete={openDeleteReviewModal}
+                          onReport={(item) =>
+                            requireLoginOr(() => openReviewReportModal(item))
+                          }
                         />
                       ))}
                     </div>
@@ -957,6 +1044,30 @@ export default function EventDetailPage() {
         }}
         onSubmit={handleReviewSubmit}
         onDelete={handleReviewDelete}
+      />
+
+      <ReportModal
+        open={reportModalOpen}
+        mode={reportModalMode}
+        report={selectedReport}
+        titleOverride={
+          reportTargetType === 'event' ? 'Report event' : 'Report review'
+        }
+        descriptionOverride={
+          reportTargetType === 'event'
+            ? `Tell us what is inappropriate or problematic about ${currentEvent.title}.`
+            : 'Tell us what is inappropriate or problematic about this review.'
+        }
+        isLoading={isReportSubmitting}
+        error={reportModalError}
+        onClose={() => {
+          setReportModalOpen(false);
+          setSelectedReport(null);
+          setSelectedReviewForReport(null);
+          setReportModalError('');
+        }}
+        onSubmit={handleReportSubmit}
+        onDelete={() => {}}
       />
     </>
   );
