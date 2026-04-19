@@ -34,6 +34,35 @@ export interface UpdateOrganizerEventInput {
   pax?: number;
 }
 
+export interface OrganizerEventBookingItem {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  creditsSpent: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizerEventWaitlistItem {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetOrganizerEventBookingsResponse {
+  count: number;
+  items: OrganizerEventBookingItem[];
+}
+
+export interface GetOrganizerEventWaitlistsResponse {
+  count: number;
+  items: OrganizerEventWaitlistItem[];
+}
+
 export function getMyOrganizerEvents(): Promise<GetMyOrganizerEventsResponse> {
   return apiFetch<GetMyOrganizerEventsResponse>('/events/mine', {
     method: 'GET',
@@ -76,4 +105,28 @@ export function deleteMyOrganizerEvent(
     method: 'DELETE',
     auth: true,
   });
+}
+
+export function getMyOrganizerEventBookings(
+  eventId: number
+): Promise<GetOrganizerEventBookingsResponse> {
+  return apiFetch<GetOrganizerEventBookingsResponse>(
+    `/events/mine/${eventId}/bookings`,
+    {
+      method: 'GET',
+      auth: true,
+    }
+  );
+}
+
+export function getMyOrganizerEventWaitlists(
+  eventId: number
+): Promise<GetOrganizerEventWaitlistsResponse> {
+  return apiFetch<GetOrganizerEventWaitlistsResponse>(
+    `/events/mine/${eventId}/waitlists`,
+    {
+      method: 'GET',
+      auth: true,
+    }
+  );
 }
