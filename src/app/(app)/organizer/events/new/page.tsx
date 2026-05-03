@@ -12,6 +12,7 @@ import {
   createOrganizerEvent,
   type CreateOrganizerEventInput,
 } from '@lib/api/organizerEvents';
+import { uploadImage } from '@lib/api/uploads';
 import type { CategoryItem } from '@mytypes/category';
 
 interface FormState {
@@ -47,10 +48,12 @@ export default function OrganizerCreateEventPage() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [error, setError] = useState('');
 
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string>('');
+  const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCategories() {
@@ -87,7 +90,7 @@ export default function OrganizerCreateEventPage() {
     }));
   }
 
-  function handleBannerChange(event: ChangeEvent<HTMLInputElement>) {
+  async function handleBannerChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
 
     if (bannerPreviewUrl) {
@@ -97,12 +100,26 @@ export default function OrganizerCreateEventPage() {
     if (!file) {
       setBannerFile(null);
       setBannerPreviewUrl('');
+      setUploadedBannerUrl(null);
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
     setBannerFile(file);
     setBannerPreviewUrl(previewUrl);
+    setError('');
+
+    try {
+      setUploadingBanner(true);
+      const result = await uploadImage(file, 'event');
+      setUploadedBannerUrl(result.url);
+    } catch (err) {
+      setUploadedBannerUrl(null);
+      setError(err instanceof Error ? err.message : 'Failed to upload banner image');
+    } finally {
+      setUploadingBanner(false);
+      event.target.value = '';
+    }
   }
 
   function clearBanner() {
@@ -112,6 +129,8 @@ export default function OrganizerCreateEventPage() {
 
     setBannerFile(null);
     setBannerPreviewUrl('');
+    setUploadedBannerUrl(null);
+    setError('');
   }
 
   function validateForm(): string {
@@ -149,6 +168,11 @@ export default function OrganizerCreateEventPage() {
       return;
     }
 
+    if (uploadingBanner) {
+      setError('Please wait for the banner image upload to finish.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError('');
@@ -156,7 +180,7 @@ export default function OrganizerCreateEventPage() {
       const payload: CreateOrganizerEventInput = {
         title: form.title.trim(),
         description: form.description.trim(),
-        bannerUrl: null,
+        bannerUrl: uploadedBannerUrl,
         categoryId: Number(form.categoryId),
         venue: form.venue.trim(),
         address: form.address.trim(),
@@ -280,10 +304,11 @@ export default function OrganizerCreateEventPage() {
                       accept="image/*"
                       onChange={handleBannerChange}
                       className="hidden"
+                      disabled={uploadingBanner || submitting}
                     />
                   </label>
 
-                  {bannerFile ? (
+                  {bannerFile || bannerPreviewUrl ? (
                     <button
                       type="button"
                       onClick={clearBanner}
@@ -297,6 +322,16 @@ export default function OrganizerCreateEventPage() {
                   ) : null}
                 </div>
               </div>
+
+              {uploadingBanner ? (
+                <p className="text-xs text-slate-500">Uploading banner image...</p>
+              ) : uploadedBannerUrl ? (
+                <p className="text-xs text-green-600">Banner image uploaded successfully.</p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Select an image to upload your event banner.
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -305,9 +340,7 @@ export default function OrganizerCreateEventPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <MapPinned size={18} className="text-slate-600" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Venue Details
-              </h2>
+              <h2 className="text-lg font-semibold text-slate-900">Venue Details</h2>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -376,9 +409,7 @@ export default function OrganizerCreateEventPage() {
 
         <Card>
           <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Schedule & Capacity
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-900">Schedule & Capacity</h2>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -443,7 +474,11 @@ export default function OrganizerCreateEventPage() {
         ) : null}
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" className="w-auto px-5" disabled={submitting}>
+          <Button
+            type="submit"
+            className="w-auto px-5"
+            disabled={submitting || uploadingBanner}
+          >
             {submitting ? 'Creating...' : 'Create Event'}
           </Button>
 
@@ -451,8 +486,8 @@ export default function OrganizerCreateEventPage() {
             type="button"
             variant="secondary"
             className="w-auto px-5"
-            onClick={() => router.push('/organizer/events')}
-            disabled={submitting}
+            onClick={() => router.back()}
+            disabled={submitting || uploadingBanner}
           >
             Cancel
           </Button>

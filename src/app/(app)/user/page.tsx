@@ -6,6 +6,7 @@ import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
 import { useAppSession } from '@lib/session/AppSessionContext';
 import { updateMyProfile } from '@lib/api/user';
+import { uploadImage } from '@lib/api/uploads';
 import type { UpdateMyProfileInput, UserGender, UserProfile } from '@mytypes/user';
 
 type FormState = {
@@ -38,15 +39,22 @@ export default function UserPage() {
 
   const [form, setForm] = useState<FormState>(() => buildInitialForm(profile));
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadedProfilePicUrl, setUploadedProfilePicUrl] = useState<string | null>(
+    profile.profilePicUrl ?? null
+  );
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     setForm(buildInitialForm(profile));
+    setUploadedProfilePicUrl(profile.profilePicUrl ?? null);
   }, [profile]);
 
   const initialForm = useMemo(() => buildInitialForm(profile), [profile]);
   const hasChanges = useMemo(() => !isSameForm(form, initialForm), [form, initialForm]);
+  const hasImageChange = uploadedProfilePicUrl !== (profile.profilePicUrl ?? null);
+  const canSubmit = hasChanges || hasImageChange;
 
   function handleChange(key: keyof FormState, value: string) {
     setForm((prev) => ({
@@ -57,12 +65,27 @@ export default function UserPage() {
     setSuccessMsg('');
   }
 
-  function handleProfilePicPlaceholderChange(_event: ChangeEvent<HTMLInputElement>) {
-    setSuccessMsg('');
-    setError('');
-    window.alert(
-      'Profile picture upload will be wired to cloud storage later. For now this is a placeholder.'
-    );
+  async function handleProfilePicChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      setError('');
+      setSuccessMsg('');
+
+      const result = await uploadImage(file, 'profile');
+      setUploadedProfilePicUrl(result.url);
+      setSuccessMsg('Profile image uploaded. Click Save Changes to persist it.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload profile image');
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = '';
+    }
   }
 
   async function handleSubmit() {
@@ -94,6 +117,10 @@ export default function UserPage() {
         payload.age = trimmedAge ? Number(trimmedAge) : null;
       }
 
+      if (uploadedProfilePicUrl !== (profile.profilePicUrl ?? null)) {
+        payload.profilePicUrl = uploadedProfilePicUrl;
+      }
+
       const updated = await updateMyProfile(payload);
       setProfile(updated);
       setSuccessMsg('Profile updated successfully.');
@@ -106,11 +133,12 @@ export default function UserPage() {
 
   function handleReset() {
     setForm(initialForm);
+    setUploadedProfilePicUrl(profile.profilePicUrl ?? null);
     setError('');
     setSuccessMsg('');
   }
 
-  const previewUrl = profile.profilePicUrl || '';
+  const previewUrl = uploadedProfilePicUrl || '';
 
   return (
     <div className="space-y-6">
@@ -153,9 +181,13 @@ export default function UserPage() {
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleProfilePicPlaceholderChange}
-                className="block w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700"
+                onChange={handleProfilePicChange}
+                disabled={isUploadingImage || isSaving}
+                className="block w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
               />
+              {isUploadingImage ? (
+                <p className="mt-2 text-xs text-slate-500">Uploading image...</p>
+              ) : null}
             </div>
 
             <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -206,13 +238,14 @@ export default function UserPage() {
                 </label>
                 <select
                   value={form.gender}
-                  onChange={(event) => handleChange('gender', event.target.value)}
+                  onChange={(event) => handleChange('gender', event.target.value as '' | UserGender)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 >
                   <option value="">Prefer not to say</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
                 </select>
               </div>
 
@@ -222,7 +255,7 @@ export default function UserPage() {
                 </label>
                 <Input
                   type="number"
-                  min="0"
+                  min={0}
                   value={form.age}
                   onChange={(event) => handleChange('age', event.target.value)}
                   placeholder="Your age"
@@ -236,33 +269,32 @@ export default function UserPage() {
                 <textarea
                   value={form.description}
                   onChange={(event) => handleChange('description', event.target.value)}
-                  placeholder="Tell others a little about yourself..."
                   rows={6}
+                  placeholder="Tell others about yourself"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 />
               </div>
             </div>
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {successMsg ? <p className="text-sm text-green-600">{successMsg}</p> : null}
 
-            {successMsg ? (
-              <p className="text-sm text-green-600">{successMsg}</p>
-            ) : null}
-
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-3">
               <Button
-                onClick={handleSubmit}
-                disabled={!hasChanges || isSaving}
+                type="button"
                 className="w-auto px-5"
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSaving || isUploadingImage}
               >
-                {isSaving ? 'Updating...' : 'Update Profile'}
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
 
               <Button
+                type="button"
                 variant="secondary"
-                onClick={handleReset}
-                disabled={!hasChanges || isSaving}
                 className="w-auto px-5"
+                onClick={handleReset}
+                disabled={isSaving || isUploadingImage}
               >
                 Reset
               </Button>

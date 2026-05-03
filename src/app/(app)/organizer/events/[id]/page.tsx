@@ -3,13 +3,23 @@
 import Link from 'next/link';
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { CalendarDays, ImagePlus, MapPinned, Trash2, Upload, Users, Clock3, X } from 'lucide-react';
+import {
+  CalendarDays,
+  ImagePlus,
+  MapPinned,
+  Trash2,
+  Upload,
+  Users,
+  Clock3,
+  X,
+} from 'lucide-react';
 import { Card } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
 import { PageSkeleton } from '@components/ui/PageSkeleton';
 import { ActionStatusModal } from '@components/ui/ActionStatusModal';
 import { GooglePlaceAutocompleteInput } from '@components/maps/GooglePlaceAutocompleteInput';
 import { getCategories } from '@lib/api/categories';
+import { uploadImage } from '@lib/api/uploads';
 import {
   deleteMyOrganizerEvent,
   getMyOrganizerEventById,
@@ -68,6 +78,7 @@ export default function OrganizerEventDetailPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
@@ -75,6 +86,7 @@ export default function OrganizerEventDetailPage() {
 
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState('');
+  const [uploadedBannerUrl, setUploadedBannerUrl] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   useEffect(() => {
@@ -95,6 +107,7 @@ export default function OrganizerEventDetailPage() {
         setEvent(eventResult);
         setForm(buildInitialForm(eventResult));
         setCategories(categoryResult.items);
+        setUploadedBannerUrl(eventResult.bannerUrl ?? null);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to load organizer event'
@@ -128,8 +141,8 @@ export default function OrganizerEventDetailPage() {
     );
   }
 
-  function handleBannerChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null;
+  async function handleBannerChange(eventObject: ChangeEvent<HTMLInputElement>) {
+    const file = eventObject.target.files?.[0] ?? null;
 
     if (bannerPreviewUrl) {
       URL.revokeObjectURL(bannerPreviewUrl);
@@ -138,12 +151,34 @@ export default function OrganizerEventDetailPage() {
     if (!file) {
       setBannerFile(null);
       setBannerPreviewUrl('');
+      setUploadedBannerUrl(event?.bannerUrl ?? null);
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
     setBannerFile(file);
     setBannerPreviewUrl(previewUrl);
+    setError('');
+    setSaveMessage('');
+    setSaveMessageType('');
+
+    try {
+      setUploadingBanner(true);
+      const result = await uploadImage(file, 'event');
+      setUploadedBannerUrl(result.url);
+      setSaveMessage('Banner image uploaded. Click Save Changes to persist it.');
+      setSaveMessageType('success');
+    } catch (err) {
+      setUploadedBannerUrl(event?.bannerUrl ?? null);
+      const message =
+        err instanceof Error ? err.message : 'Failed to upload banner image';
+      setError(message);
+      setSaveMessage(message);
+      setSaveMessageType('error');
+    } finally {
+      setUploadingBanner(false);
+      eventObject.target.value = '';
+    }
   }
 
   function clearBannerSelection() {
@@ -153,6 +188,9 @@ export default function OrganizerEventDetailPage() {
 
     setBannerFile(null);
     setBannerPreviewUrl('');
+    setUploadedBannerUrl(null);
+    setSaveMessage('');
+    setSaveMessageType('');
   }
 
   function validateForm(): string {
@@ -192,6 +230,13 @@ export default function OrganizerEventDetailPage() {
       return;
     }
 
+    if (uploadingBanner) {
+      setError('Please wait for the banner image upload to finish.');
+      setSaveMessage('');
+      setSaveMessageType('');
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
@@ -201,7 +246,7 @@ export default function OrganizerEventDetailPage() {
       const updated = await updateMyOrganizerEvent(event.id, {
         title: form.title.trim(),
         description: form.description.trim(),
-        bannerUrl: event.bannerUrl ?? null,
+        bannerUrl: uploadedBannerUrl,
         categoryId: Number(form.categoryId),
         venue: form.venue.trim(),
         address: form.address.trim(),
@@ -214,6 +259,7 @@ export default function OrganizerEventDetailPage() {
 
       setEvent(updated);
       setForm(buildInitialForm(updated));
+      setUploadedBannerUrl(updated.bannerUrl ?? null);
       clearBannerSelection();
 
       setSaveMessage('Event updated successfully.');
@@ -276,7 +322,7 @@ export default function OrganizerEventDetailPage() {
     return null;
   }
 
-  const currentBanner = bannerPreviewUrl || event.bannerUrl || '';
+  const currentBanner = bannerPreviewUrl || uploadedBannerUrl || '';
   const eventStarted = new Date(event.startsAt) <= new Date();
 
   return (
@@ -398,10 +444,11 @@ export default function OrganizerEventDetailPage() {
                       accept="image/*"
                       onChange={handleBannerChange}
                       className="hidden"
+                      disabled={uploadingBanner || saving}
                     />
                   </label>
 
-                  {bannerFile || bannerPreviewUrl ? (
+                  {bannerFile || bannerPreviewUrl || uploadedBannerUrl ? (
                     <button
                       type="button"
                       onClick={clearBannerSelection}
@@ -415,6 +462,12 @@ export default function OrganizerEventDetailPage() {
                   ) : null}
                 </div>
               </div>
+
+              {uploadingBanner ? (
+                <p className="mt-3 text-xs text-slate-500">Uploading banner image...</p>
+              ) : uploadedBannerUrl ? (
+                <p className="mt-3 text-xs text-green-600">Banner image ready to save.</p>
+              ) : null}
             </div>
           </div>
         </Card>
@@ -486,10 +539,16 @@ export default function OrganizerEventDetailPage() {
 
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <p>
-                      Started: <span className="font-medium text-slate-900">{eventStarted ? 'Yes' : 'No'}</span>
+                      Started:{' '}
+                      <span className="font-medium text-slate-900">
+                        {eventStarted ? 'Yes' : 'No'}
+                      </span>
                     </p>
                     <p>
-                      Bookings: <span className="font-medium text-slate-900">{event.totalBookings ?? 0}</span>
+                      Bookings:{' '}
+                      <span className="font-medium text-slate-900">
+                        {event.totalBookings ?? 0}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -640,15 +699,16 @@ export default function OrganizerEventDetailPage() {
 
           {saveMessage ? (
             <p
-              className={`text-sm ${saveMessageType === 'success' ? 'text-green-600' : 'text-red-600'
-                }`}
+              className={`text-sm ${
+                saveMessageType === 'success' ? 'text-green-600' : 'text-red-600'
+              }`}
             >
               {saveMessage}
             </p>
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" className="w-auto px-5" disabled={saving}>
+            <Button type="submit" className="w-auto px-5" disabled={saving || uploadingBanner}>
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
 
