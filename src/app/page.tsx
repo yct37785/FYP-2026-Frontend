@@ -7,6 +7,8 @@ import { EventFilterBar } from '@components/event/EventFilterBar';
 import { EventCard } from '@components/event/EventCard';
 import { PageSkeleton } from '@components/ui/PageSkeleton';
 import { getPublicEvents } from '@lib/api/events';
+import { getMyCategories } from '@lib/api/user';
+import { tokenStorage } from '@lib/auth/token';
 import type { EventItem } from '@mytypes/event';
 
 function getTodayRange() {
@@ -51,6 +53,31 @@ export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(
     undefined
   );
+  const [favoriteCategoryIds, setFavoriteCategoryIds] = useState<number[]>([]);
+  const [favoriteCategoriesLoaded, setFavoriteCategoriesLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFavoriteCategories() {
+      try {
+        const token = tokenStorage.get();
+
+        if (!token) {
+          setFavoriteCategoryIds([]);
+          setFavoriteCategoriesLoaded(true);
+          return;
+        }
+
+        const result = await getMyCategories();
+        setFavoriteCategoryIds(result.items.map((item) => item.categoryId));
+      } catch {
+        setFavoriteCategoryIds([]);
+      } finally {
+        setFavoriteCategoriesLoaded(true);
+      }
+    }
+
+    void loadFavoriteCategories();
+  }, []);
 
   useEffect(() => {
     async function loadEvents() {
@@ -100,7 +127,30 @@ export default function HomePage() {
     return () => window.clearTimeout(timeout);
   }, [keyword, selectedPreset, selectedCategoryId]);
 
-  const featuredEvent = useMemo(() => getRandomFeaturedEvent(items), [items]);
+  const hasFavoriteCategories = favoriteCategoryIds.length > 0;
+
+  const displayedItems = useMemo(() => {
+    if (selectedPreset !== 'forMe') {
+      return items;
+    }
+
+    if (!hasFavoriteCategories) {
+      return [];
+    }
+
+    const favoriteSet = new Set(favoriteCategoryIds);
+    return items.filter((event) => favoriteSet.has(event.categoryId));
+  }, [items, selectedPreset, favoriteCategoryIds, hasFavoriteCategories]);
+
+  const featuredEvent = useMemo(
+    () => getRandomFeaturedEvent(displayedItems),
+    [displayedItems]
+  );
+
+  const showFavoriteCategoryPrompt =
+    selectedPreset === 'forMe' &&
+    favoriteCategoriesLoaded &&
+    !hasFavoriteCategories;
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -136,7 +186,16 @@ export default function HomePage() {
                 eventsCategorySource={items}
               />
 
-              {items.length === 0 ? (
+              {showFavoriteCategoryPrompt ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    Please set your favorite categories.
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Go to your profile categories page to personalize events for you.
+                  </p>
+                </div>
+              ) : displayedItems.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
                   <h2 className="text-xl font-semibold text-slate-900">
                     No events found
@@ -147,8 +206,12 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                  {items.map((event) => (
-                    <EventCard key={event.id} event={event} href={`/events/${event.id}`} />
+                  {displayedItems.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      href={`/events/${event.id}`}
+                    />
                   ))}
                 </div>
               )}

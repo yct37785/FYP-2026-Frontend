@@ -18,6 +18,7 @@ interface EventFilterBarProps {
 
 const presetOptions = [
   { label: 'All', value: 'all' },
+  { label: 'For Me', value: 'forMe' },
   { label: 'Today', value: 'today' },
   { label: 'This Weekend', value: 'weekend' },
   { label: 'Free', value: 'free' },
