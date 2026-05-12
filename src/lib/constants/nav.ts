@@ -11,6 +11,8 @@ import {
   PlusSquare,
   Shield,
   Database,
+  UsersRound,
+  CalendarCheck
 } from 'lucide-react';
 import type { UserRole } from '@mytypes/user';
 
@@ -26,6 +28,8 @@ const userNav: NavItem[] = [
   { label: 'My Bookings', href: '/user/bookings', icon: Ticket },
   { label: 'My Waitlists', href: '/user/waitlists', icon: Clock3 },
   { label: 'My Favorites', href: '/user/favorites', icon: Heart },
+  { label: 'Groups', href: '/user/groups', icon: UsersRound },
+  { label: 'Calendar Sync', href: '/user/calendar', icon: CalendarCheck },
   { label: 'My Reviews', href: '/user/reviews', icon: Star },
   { label: 'My Reports', href: '/user/reports', icon: FileWarning },
 ];
